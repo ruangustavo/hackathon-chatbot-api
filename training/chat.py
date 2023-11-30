@@ -86,20 +86,14 @@ while True:
 
     if run.status == "requires_action":
         tool_calls = run.required_action.submit_tool_outputs.tool_calls
+
         for tool_call in tool_calls:
             function_name = tool_call.function.name
             function_args = json.loads(tool_call.function.arguments)
             function_response = globals()[function_name](**function_args)
-            print(f"Chamou '{function_name}' com args {function_args}")
-            print(f"Respondeu '{function_response}'")
 
-            run = openai.beta.threads.runs.submit_tool_outputs(
-                thread_id=thread.id,
-                run_id=run.id,
-                tool_outputs=[
-                    {"tool_call_id": tool_call.id, "output": function_response}
-                ],
-            )
+            web
+            continue
 
     messages = openai.beta.threads.messages.list(
         thread_id=thread.id,
