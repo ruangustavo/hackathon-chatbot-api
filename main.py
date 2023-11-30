@@ -73,12 +73,12 @@ def get_best_promotion(product_name):
     print(f"Chamou get_best_promotion com args {product_name}")
     products = fetch_products(product_name)
     if products is None:
-        return "Não temos promoções para esse produto"
+        return {"products": []}
     products = filter_and_sort_products(products)
     if len(products) == 0:
         return "Não temos promoções para esse produto"
     best_product = products[0]
-    return f"Encontrei uma promoção para {best_product['title']} com {best_product['price_discount']}% de desconto, acesse {best_product['short_url']} para conferir!"
+    return {"products": products, "best_product": best_product}
 
 
 assistant = openai.beta.assistants.create(
@@ -139,7 +139,7 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def send_message(self, message: str, websocket: WebSocket):
-        await websocket.send_text(message)
+        await websocket.send_text(json.dumps(message))
 
 
 manager = ConnectionManager()
@@ -191,15 +191,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     print(f"Chamou '{function_name}' com args {function_args}")
                     print(f"Respondeu '{function_response}'")
 
-                    # run = openai.beta.threads.runs.submit_tool_outputs(
-                    #     thread_id=thread.id,
-                    #     run_id=run.id,
-                    #     tool_outputs=[
-                    #         {"tool_call_id": tool_call.id, "output": function_response}
-                    #     ],
-                    # )
-
-                    await websocket.send_text(function_response)
+                    await websocket.send_text(
+                        json.dumps({"type": "chat", "content": function_response})
+                    )
 
                 continue
 
@@ -209,7 +203,9 @@ async def websocket_endpoint(websocket: WebSocket):
             )
 
             chat_response = messages.data[0].content[0].text.value
-            await websocket.send_text(f"ChatGPT: {chat_response}")
+            await websocket.send_text(
+                json.dumps({"type": "chat", "content": {"message": chat_response}})
+            )
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
