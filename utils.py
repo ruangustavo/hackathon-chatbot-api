@@ -1,29 +1,8 @@
-def fetch_products(product):
-    api_url = PECHINCHOU_SEARCH_URL.format(product=product)
-    response = httpx.get(api_url).json()
-
-    if "results" not in response:
-        return None
-
-    return response["results"]
+def str_to_date(datetime_str):
+    format_str = "%Y-%m-%dT%H:%M:%S.%f%z"
+    datetime = datetime.strptime(datetime_str, format_str)
+    return datetime
 
 
-def filter_and_sort_products(products):
-    for product in products:
-        old_price = float(product["old_price"])
-        price = float(product["price"])
-
-        price_discount = int(99 - ((price * 100) / old_price))
-        total_likes = len(product["likes"])
-
-        product["price_discount"] = price_discount
-        product["total_likes"] = total_likes
-
-    products = [
-        product
-        for product in products
-        if product["status"] == "ACTIVE" and not product["warning"]
-    ]
-    products.sort(key=lambda x: x["total_likes"], reverse=True)
-
-    return products
+def to_utf8(string: str):
+    return bytes(string, "utf-8").decode("unicode-escape")

@@ -7,6 +7,8 @@ import json
 import os
 import httpx
 
+from datetime import datetime
+
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -23,21 +25,84 @@ tools = [
     {
         "type": "function",
         "function": {
-            "name": "get_best_promotion",
-            "description": "Pega a melhor promoção de um produto",
+            "name": "get_best_promotion_with_params",
+            "description": "Pega a melhor promoção de um produto com os parâmetros especificados, promocoes boas sao aquelas que tem mais likes",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "product_name": {
                         "type": "string",
-                        "description": "O nome do produto",
-                    },
+                        "description": "Nome do produto a ser buscado, retorna uma lista de produtos",
+                    }
                 },
                 "required": ["product_name"],
             },
         },
     }
 ]
+
+# QUERIES
+# melhor promocao de ar condicionado hoje
+# melhor promocao de ar condicionado
+# melhor promocao de celular xiami 4GB
+# melhor suporte e comunicacao como o envio do email da penchinchou em caso de denuncia ou outras coisas
+# bot atuar como feedback de uma promocao ou quando um usuario quer ter mais informacoes sobre uma promocao.
+
+
+def str_to_date(date_str):
+    datetime_str = "2023-10-07T12:22:17.268138-03:00"
+    format_str = "%Y-%m-%dT%H:%M:%S.%f%z"
+    datetime = datetime.strptime(datetime_str, format_str)
+    return datetime
+
+
+def filter_by_params(products, params={}):
+    if params == {}:
+        return products
+
+    if "store" in params:
+        products = [
+            product
+            for product in products
+            if product["store"]["name"] == params["store"]
+        ]
+    if "category" in params:
+        products = [
+            product
+            for product in products
+            if product["category"]["name"] == params["category"]
+        ]
+    if "price_max" in params:
+        products = [
+            product for product in products if product["price"] <= params["price_max"]
+        ]
+    if "price_min" in params:
+        products = [
+            product for product in products if product["price"] >= params["price_min"]
+        ]
+    if "discount" in params:
+        products = [
+            product
+            for product in products
+            if product["price_discount"] >= params["discount"]
+        ]
+    if "date_max" in params:
+        products = [
+            product
+            for product in products
+            if str_to_date(product["created_at"]) <= str_to_date(params["datetime_max"])
+        ]
+    if "date_min" in params:
+        products = [
+            product
+            for product in products
+            if str_to_date(product["created_at"]) >= str_to_date(params["date_min"])
+        ]
+    if "likes" in params:
+        products = [
+            product for product in products if product["total_likes"] >= params["likes"]
+        ]
+    return products
 
 
 def fetch_products(product):
@@ -69,14 +134,14 @@ def filter_and_sort_products(products):
     return products
 
 
-def get_best_promotion(product_name):
+def get_best_promotion_with_params(product_name):
     print(f"Chamou get_best_promotion com args {product_name}")
     products = fetch_products(product_name)
     if products is None:
         return {"products": []}
     products = filter_and_sort_products(products)
     if len(products) == 0:
-        return "Não temos promoções para esse produto"
+        return {"products": []}
     best_product = products[0]
     return {"products": products, "best_product": best_product}
 
@@ -177,25 +242,36 @@ async def websocket_endpoint(websocket: WebSocket):
                     thread_id=thread.id,
                 )
 
+                print("run status", run.status)
+
                 if run.status not in ["queued", "in_progress", "cancelling"]:
                     break
 
             if run.status == "requires_action":
                 tool_calls = run.required_action.submit_tool_outputs.tool_calls
 
+                tool_outputs = []
                 for tool_call in tool_calls:
                     function_name = tool_call.function.name
                     function_args = json.loads(tool_call.function.arguments)
+                    print("function name", function_name)
+                    print("function args", function_args)
                     function_response = globals()[function_name](**function_args)
-
-                    print(f"Chamou '{function_name}' com args {function_args}")
-                    print(f"Respondeu '{function_response}'")
-
                     await websocket.send_text(
                         json.dumps({"type": "chat", "content": function_response})
                     )
 
-                continue
+                    tool_outputs.append(
+                        {
+                            "tool_call_id": tool_call.id,
+                            "output": json.dumps(function_response),
+                        }
+                    )
+
+                print("tool outputs", tool_outputs)
+                openai.beta.threads.runs.submit_tool_outputs(
+                    run_id=run.id, thread_id=thread.id, tool_outputs=tool_outputs
+                )
 
             messages = openai.beta.threads.messages.list(
                 thread_id=thread.id,
