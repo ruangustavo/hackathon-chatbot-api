@@ -17,7 +17,7 @@ tools = [
     {
         "type": "function",
         "function": {
-            "name": "get_best_promotion_with_params",
+            "name": "get_best_promotion",
             "description": "Pega a melhor promoção de um produto com os parâmetros especificados, promocoes boas sao aquelas que tem mais likes",
             "parameters": {
                 "type": "object",
@@ -32,6 +32,7 @@ tools = [
         },
     }
 ]
+
 
 def fetch_products(product):
     api_url = PECHINCHOU_SEARCH_URL.format(product=product)
@@ -62,7 +63,7 @@ def filter_and_sort_products(products):
     return products
 
 
-def get_best_promotion_with_params(product_name):
+def get_best_promotion(product_name):
     print(f"get_best_promotion {product_name}")
     data = fetch_products(product_name)
     if products is None or products == []:
