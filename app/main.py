@@ -1,13 +1,10 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field
 import openai
 from dotenv import load_dotenv
 import json
 import os
 import httpx
-
-from datetime import datetime
 
 load_dotenv()
 
@@ -15,11 +12,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PECHINCHOU_SEARCH_URL = "https://admin.pechinchou.com.br/api/v2/produto/listar_produtos_por_opcao/search/{product}/?page=1"
 
 app = FastAPI()
-
-
-class MessageInput(BaseModel):
-    content: str = Field(..., max_length=100)
-
 
 tools = [
     {
@@ -40,70 +32,6 @@ tools = [
         },
     }
 ]
-
-# QUERIES
-# melhor promocao de ar condicionado hoje
-# melhor promocao de ar condicionado
-# melhor promocao de celular xiami 4GB
-# melhor suporte e comunicacao como o envio do email da penchinchou em caso de denuncia ou outras coisas
-# bot atuar como feedback de uma promocao ou quando um usuario quer ter mais informacoes sobre uma promocao.
-
-
-def str_to_date(date_str):
-    datetime_str = "2023-10-07T12:22:17.268138-03:00"
-    format_str = "%Y-%m-%dT%H:%M:%S.%f%z"
-    datetime = datetime.strptime(datetime_str, format_str)
-    return datetime
-
-
-def filter_by_params(products, params={}):
-    if params == {}:
-        return products
-
-    if "store" in params:
-        products = [
-            product
-            for product in products
-            if product["store"]["name"] == params["store"]
-        ]
-    if "category" in params:
-        products = [
-            product
-            for product in products
-            if product["category"]["name"] == params["category"]
-        ]
-    if "price_max" in params:
-        products = [
-            product for product in products if product["price"] <= params["price_max"]
-        ]
-    if "price_min" in params:
-        products = [
-            product for product in products if product["price"] >= params["price_min"]
-        ]
-    if "discount" in params:
-        products = [
-            product
-            for product in products
-            if product["price_discount"] >= params["discount"]
-        ]
-    if "date_max" in params:
-        products = [
-            product
-            for product in products
-            if str_to_date(product["created_at"]) <= str_to_date(params["datetime_max"])
-        ]
-    if "date_min" in params:
-        products = [
-            product
-            for product in products
-            if str_to_date(product["created_at"]) >= str_to_date(params["date_min"])
-        ]
-    if "likes" in params:
-        products = [
-            product for product in products if product["total_likes"] >= params["likes"]
-        ]
-    return products
-
 
 def fetch_products(product):
     api_url = PECHINCHOU_SEARCH_URL.format(product=product)
@@ -135,13 +63,11 @@ def filter_and_sort_products(products):
 
 
 def get_best_promotion_with_params(product_name):
-    print(f"Chamou get_best_promotion com args {product_name}")
-    products = fetch_products(product_name)
-    if products is None:
+    print(f"get_best_promotion {product_name}")
+    data = fetch_products(product_name)
+    if products is None or products == []:
         return {"products": []}
-    products = filter_and_sort_products(products)
-    if len(products) == 0:
-        return {"products": []}
+    products = filter_and_sort_products(data)
     best_product = products[0]
     return {"products": products, "best_product": best_product}
 
@@ -155,7 +81,6 @@ assistant = openai.beta.assistants.create(
     """,
     tools=tools,
 )
-
 
 html = """
 <!DOCTYPE html>
@@ -217,7 +142,7 @@ async def get():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
+    await manager.connect(websocket)
 
     thread = openai.beta.threads.create()
 
@@ -241,8 +166,6 @@ async def websocket_endpoint(websocket: WebSocket):
                     run_id=run.id,
                     thread_id=thread.id,
                 )
-
-                print("run status", run.status)
 
                 if run.status not in ["queued", "in_progress", "cancelling"]:
                     break
@@ -268,7 +191,6 @@ async def websocket_endpoint(websocket: WebSocket):
                         }
                     )
 
-                print("tool outputs", tool_outputs)
                 openai.beta.threads.runs.submit_tool_outputs(
                     run_id=run.id, thread_id=thread.id, tool_outputs=tool_outputs
                 )
