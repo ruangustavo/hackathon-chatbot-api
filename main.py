@@ -40,39 +40,51 @@ tools = [
 ]
 
 
-def search_products(product: str) -> Optional[Dict]:
+def search_promotions(product: str) -> Optional[Dict]:
     url = PECHINCHOU_SEARCH_URL.format(product=product)
     response = httpx.get(url).json()
     return response.get("results")
 
 
-def filter_and_sort_products(products):
-    for product in products:
-        old_price = float(product["old_price"])
-        price = float(product["price"])
+def filter_active_promotions(promotions):
+    for promotion in promotions:
+        old_price = float(promotion["old_price"])
+        price = float(promotion["price"])
+        promotion["price_discount"] = int(99 - ((price * 100) / old_price))
+        promotion["total_likes"] = len(promotion["likes"])
 
-        price_discount = int(99 - ((price * 100) / old_price))
-        total_likes = len(product["likes"])
-
-        product["price_discount"] = price_discount
-        product["total_likes"] = total_likes
-    products = [
+    active_promotions = [
         product
-        for product in products
+        for product in promotions
         if product["status"] == "ACTIVE" and not product["warning"]
     ]
-    products.sort(key=lambda x: x["total_likes"], reverse=True)
-    return products
+
+    return active_promotions
 
 
-def get_best_promotion(product_name):
-    print(f"get_best_promotion {product_name}")
-    data = search_products(product_name)
-    if data is None or data == []:
-        return {"products": []}
-    products = filter_and_sort_products(data)
-    best_product = products[0]
-    return {"products": products, "best_product": best_product}
+def get_best_promotion(product):
+    print(f"get_best_promotion {product}")
+    promotions = search_promotions(product)
+
+    if promotions is None or promotions == []:
+        return {
+            "products": [],
+        }
+
+    active_promotions = filter_active_promotions(promotions)
+
+    # Ordenando as promoções por likes em ordem decrescente
+    active_promotions.sort(
+        key=lambda x: x["total_likes"],
+        reverse=True,
+    )
+
+    best_promotion = active_promotions[0]
+
+    return {
+        "products": active_promotions,
+        "best_product": best_promotion,
+    }
 
 
 assistant = openai.beta.assistants.create(
