@@ -196,6 +196,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     run_id=run.id, thread_id=thread.id, tool_outputs=tool_outputs
                 )
 
+                continue
+
             messages = openai.beta.threads.messages.list(
                 thread_id=thread.id,
                 limit=1,

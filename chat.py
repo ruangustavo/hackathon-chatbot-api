@@ -10,6 +10,11 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PECHINCHOU_SEARCH_URL = "https://admin.pechinchou.com.br/api/v2/produto/listar_produtos_por_opcao/search/{product}/?page=1"
 
+# Desafio: Fazer com que o chatgpt interprete datas de forma humana
+# como por exemplo "hoje" e "ontem" ou uma data especifica e validar se
+# a data digitada esta certa ou errada. Caso esteja errada, perguntar
+# novamente a data.
+
 
 def get_most_important_product_word(sentence):
     openai.api_key = OPENAI_API_KEY
