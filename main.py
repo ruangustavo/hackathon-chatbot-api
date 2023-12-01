@@ -4,11 +4,18 @@ from dotenv import load_dotenv
 import json
 import os
 import httpx
+from urllib.parse import urljoin
+
+from typing import Optional, Dict
 
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-PECHINCHOU_SEARCH_URL = "https://admin.pechinchou.com.br/api/v2/produto/listar_produtos_por_opcao/search/{product}/?page=1"
+PECHINCHOU_BASE_URL = "https://admin.pechinchou.com.br/api/v2/"
+PECHINCHOU_SEARCH_URL = urljoin(
+    PECHINCHOU_BASE_URL,
+    "produto/listar_produtos_por_opcao/search/{product}/?page=1",
+)
 
 app = FastAPI()
 
@@ -33,14 +40,10 @@ tools = [
 ]
 
 
-def fetch_products(product):
-    api_url = PECHINCHOU_SEARCH_URL.format(product=product)
-    response = httpx.get(api_url).json()
-
-    if "results" not in response:
-        return None
-
-    return response["results"]
+def search_products(product: str) -> Optional[Dict]:
+    url = PECHINCHOU_SEARCH_URL.format(product=product)
+    response = httpx.get(url).json()
+    return response.get("results")
 
 
 def filter_and_sort_products(products):
@@ -64,7 +67,7 @@ def filter_and_sort_products(products):
 
 def get_best_promotion(product_name):
     print(f"get_best_promotion {product_name}")
-    data = fetch_products(product_name)
+    data = search_products(product_name)
     if data is None or data == []:
         return {"products": []}
     products = filter_and_sort_products(data)
