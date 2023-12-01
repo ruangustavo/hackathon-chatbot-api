@@ -1,7 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from app.websocket import ConnectionManager
-from app.assistent import run_assistent
 
+from app.assistent import run_assistent
+from app.websocket import ConnectionManager
 
 app = FastAPI()
 manager = ConnectionManager()

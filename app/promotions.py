@@ -1,6 +1,7 @@
-import httpx
-from typing import Optional, Dict
+from typing import Dict, Optional
 from urllib.parse import urljoin
+
+import httpx
 
 PECHINCHOU_BASE_URL = "https://admin.pechinchou.com.br/api/v2/"
 PECHINCHOU_SEARCH_URL = urljoin(
