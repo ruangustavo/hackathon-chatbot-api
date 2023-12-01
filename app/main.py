@@ -66,7 +66,7 @@ def filter_and_sort_products(products):
 def get_best_promotion(product_name):
     print(f"get_best_promotion {product_name}")
     data = fetch_products(product_name)
-    if products is None or products == []:
+    if data is None or data == []:
         return {"products": []}
     products = filter_and_sort_products(data)
     best_product = products[0]
