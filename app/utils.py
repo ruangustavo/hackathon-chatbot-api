@@ -4,5 +4,5 @@ def str_to_date(datetime_str):
     return datetime
 
 
-def to_utf8(string: str):
+def decode_to_utf8(string: str):
     return bytes(string, "utf-8").decode("unicode-escape")

@@ -1,3 +1,0 @@
-# Desafio: Fazer com que o chatgpt interprete datas de forma humana
-como por exemplo "hoje" e "ontem" ou uma data especifica e validar se 
-a data digitada esta certa ou errada.
