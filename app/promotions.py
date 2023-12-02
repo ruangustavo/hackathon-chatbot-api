@@ -32,9 +32,9 @@ def filter_active_promotions(promotions):
     return active_promotions
 
 
-def get_best_promotion(product):
-    print(f"get_best_promotion {product}")
-    promotions = search_promotions(product)
+def get_best_promotion(product_name):
+    print(f"get_best_promotion {product_name}")
+    promotions = search_promotions(product_name)
 
     if promotions is None or promotions == []:
         return {
